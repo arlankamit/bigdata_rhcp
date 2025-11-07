@@ -4,11 +4,6 @@ __pycache__/
 *.pyc
 .venv/
 .env
-# Models & data (оставим под LFS)
-models/
-data/
-# Reports cache (оставим под LFS, картинки можно оставить)
-reports/*.csv
 # OS/IDE
 .DS_Store
 .vscode/
