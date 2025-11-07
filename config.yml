@@ -1,0 +1,14 @@
+data:
+  raw_csv: "data/transport_complaints_astana_almaty_100k.csv"
+  processed_parquet: "data/complaints.parquet"
+
+models:
+  priority_path: "models/priority_clf.joblib"
+  aspect_path: "models/aspect_clf.joblib"
+
+training:
+  test_size: 0.2
+  random_state: 42
+
+visualization:
+  out_dir: "reports"

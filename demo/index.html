@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Haka Analyzer — Demo (UX v2)</title>
+<style>
+  :root{
+    --bg:#0b0c10; --card:#0f1220; --muted:#a0a4ae; --text:#e8ecf1; --accent:#7aa2ff;
+    --ok:#18a957; --warn:#f2b01e; --hi:#ff7a1a; --crit:#ef4444; --border:#222634;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,Helvetica,sans-serif;background:linear-gradient(160deg,#0b0c10,#121421 40%,#0e1020);color:var(--text)}
+  .container{max-width:1080px;margin:28px auto;padding:0 16px}
+  header{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+  h1{font-size:22px;margin:0 0 4px 0;letter-spacing:0.2px}
+  .subtitle{color:var(--muted);font-size:13px}
+  .grid{display:grid;gap:14px;grid-template-columns:1.05fr 1fr}
+  @media (max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--card),#0e1122);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+  .card h3{margin:0 0 8px 0;font-weight:700;font-size:15px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  label{display:block;font-size:12px;color:var(--muted);margin:6px 0}
+  textarea,input,select{width:100%;background:#0c0f1e;border:1px solid #1b2032;color:var(--text);border-radius:12px;padding:10px 12px;outline:none}
+  textarea{min-height:120px;resize:vertical}
+  .btn{appearance:none;border:1px solid #2a3350;background:linear-gradient(180deg,#151a2b,#12162a);color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:600}
+  .btn:hover{border-color:#3b4670}
+  .btn.primary{background:linear-gradient(180deg,#23315a,#1a2446);border-color:#31406f}
+  .btn.ghost{background:transparent}
+  .btn.warn{border-color:#6b4c0c}
+  .pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;padding:6px 9px;border-radius:999px;border:1px solid var(--border);background:#0c0f1e}
+  .pill.kv span{color:var(--muted)}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .priority{font-weight:800;letter-spacing:.3px}
+  .priority.low{color:var(--ok)}
+  .priority.medium{color:var(--warn)}
+  .priority.high{color:var(--hi)}
+  .priority.critical{color:var(--crit)}
+  .legend{display:flex;gap:8px;flex-wrap:wrap}
+  .legend .tag{font-size:11px;border:1px solid var(--border);padding:4px 8px;border-radius:999px}
+  .legend .low{color:var(--ok)} .legend .medium{color:var(--warn)} .legend .high{color:var(--hi)} .legend .critical{color:var(--crit)}
+  .bar{height:9px;border-radius:6px;background:#0f1322;border:1px solid #1d2440;position:relative;overflow:hidden}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#6ee7ff);width:0%}
+  .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{padding:6px 10px;background:#0d1324;border:1px solid #1f2a4a;border-radius:999px;font-size:12px;cursor:pointer}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:700px){.cols{grid-template-columns:1fr}}
+  .map{width:100%;height:220px;border:0;border-radius:12px}
+  .hint{font-size:12px;color:var(--muted)}
+  .sep{height:1px;background:#1a1f2e;margin:12px -14px}
+  .danger{color:var(--crit)}
+  .hidden{display:none}
+  .reports{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media (max-width:700px){.reports{grid-template-columns:1fr}}
+  .reports img{width:100%;border-radius:10px;border:1px solid var(--border);background:#0c0f1e}
+  details{border:1px dashed #2a3350;border-radius:12px;padding:10px}
+  summary{cursor:pointer;color:var(--muted);font-weight:600}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+  .kpis .k{background:#0d1222;border:1px solid #1c2340;border-radius:12px;padding:10px}
+  .k .v{font-size:18px;font-weight:800}
+  .toast{position:fixed;right:16px;bottom:16px;background:#0d1324;border:1px solid #1f2a4a;padding:10px 12px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.25s}
+  .toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Haka Analyzer — Demo</h1>
+        <div class="subtitle">Шаги: 1) Вставь жалобу → 2) (опционально) укажи город → 3) Нажми <b>Analyze</b>. Cmd/Ctrl+Enter тоже работает.</div>
+      </div>
+      <div>
+        <details>
+          <summary>Advanced (Backend/Auth)</summary>
+          <div class="row" style="margin-top:8px">
+            <div class="pill kv"><span>Backend</span>
+              <select id="baseUrl">
+                <option value="http://localhost:8000" selected>http://localhost:8000</option>
+                <option value="">custom… (edit below)</option>
+              </select>
+            </div>
+            <div class="pill kv"><span>Auth</span>
+              <select id="authMode">
+                <option value="none" selected>None</option>
+                <option value="apikey">API Key</option>
+                <option value="basic">Basic</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
+          </div>
+          <div class="cols" style="margin-top:8px">
+            <div>
+              <label>Custom Backend URL</label>
+              <input id="customBaseUrl" placeholder="http://host:port" />
+            </div>
+            <div>
+              <label>X‑API‑Key</label>
+              <input id="apiKey" placeholder="demo-key-123" />
+            </div>
+          </div>
+          <div style="margin-top:8px">
+            <label>Basic user:pass</label>
+            <input id="basic" placeholder="demo:demo" />
+          </div>
+        </details>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: INPUT -->
+      <section class="card">
+        <h3>1) Вставьте текст жалобы</h3>
+        <label>Complaint text</label>
+        <textarea id="text" placeholder="Например: В 18:10 у остановки Сайран автобус 201 не остановился, внутри переполнено"></textarea>
+        <div class="cols">
+          <div>
+            <label>City hint (optional)</label>
+            <input id="city" placeholder="Astana / Almaty" />
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <div class="row">
+              <button class="btn primary" id="btnRun">Analyze</button>
+              <button class="btn" id="btnClear">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="hint">Или выберите пример:</div>
+        <div class="chips" style="margin-top:6px">
+          <div class="chip" data-s="kz1">Kazakh — crowding</div>
+          <div class="chip" data-s="ru1">Russian — payment</div>
+          <div class="chip" data-s="safety">Safety — critical</div>
+          <div class="chip" data-s="punctual">Punctuality</div>
+        </div>
+        <div class="kpis">
+          <div class="k"><div class="hint">Последний ответ</div><div class="v" id="kpiPr">—</div></div>
+          <div class="k"><div class="hint">Latency (ms)</div><div class="v" id="kpiLat">—</div></div>
+          <div class="k"><div class="hint">History</div><div class="v" id="kpiHist">0</div></div>
+        </div>
+      </section>
+
+      <!-- RIGHT: RESULT -->
+      <section class="card">
+        <h3>2) Результат</h3>
+        <div class="legend" style="margin-bottom:6px">
+          <div class="tag low">LOW</div>
+          <div class="tag medium">MEDIUM</div>
+          <div class="tag high">HIGH</div>
+          <div class="tag critical">CRITICAL</div>
+        </div>
+        <div id="resultEmpty" class="hint">Пока пусто. Вставьте текст и нажмите <b>Analyze</b>.</div>
+        <div id="result" class="hidden">
+          <div class="row" style="align-items:center;justify-content:space-between">
+            <div class="badges">
+              <div id="priorityBadge" class="priority">—</div>
+              <div class="pill kv"><span>Aspect</span><b id="aspect">—</b></div>
+              <div class="pill kv"><span>Participant</span><b id="participant">—</b></div>
+            </div>
+            <div class="row">
+              <button class="btn" id="btnCopy">Copy JSON</button>
+              <button class="btn ghost" id="btnShare">Share link</button>
+              <button class="btn ghost" id="btnDownload">Download JSON</button>
+            </div>
+          </div>
+
+          <div style="margin-top:10px">
+            <div class="kv"><div>Place</div><div id="place">—</div></div>
+            <div id="mapWrap" class="hidden" style="margin:10px 0 6px 0"></div>
+            <div class="kv"><div>Advice (KZ)</div><div id="rec" class="hint">—</div></div>
+          </div>
+
+          <div class="sep"></div>
+          <h3 style="margin:0 0 6px 0">Probabilities</h3>
+          <div id="probs"></div>
+
+          <div class="sep"></div>
+          <h3 style="margin:0 0 6px 0">Model tokens</h3>
+          <div id="tokens" class="chips"></div>
+
+          <div class="sep"></div>
+          <h3 style="margin:0 0 6px 0">Raw JSON</h3>
+          <pre id="json"></pre>
+        </div>
+        <div id="err" class="danger hidden"></div>
+      </section>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="grid" style="margin-top:14px">
+      <section class="card">
+        <h3>3) Отчёты (auto‑generated)</h3>
+        <div class="hint">PNG‑файлы из <code>/reports</code> отображаются автоматически.</div>
+        <div class="reports" style="margin-top:8px">
+          <img src="/reports/routes_top.png" onerror="this.style.display='none'" alt="routes_top" />
+          <img src="/reports/aspects_hist.png" onerror="this.style.display='none'" alt="aspects_hist" />
+          <img src="/reports/priority_stacked.png" onerror="this.style.display='none'" alt="priority_stacked" />
+          <img src="/reports/priority_confusion.png" onerror="this.style.display='none'" alt="priority_confusion" />
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>History (session)</h3>
+        <div id="history" class="hint">Empty.</div>
+      </section>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">Copied</div>
+
+<script>
+  const $ = (sel) => document.querySelector(sel);
+  const elText = $('#text');
+  const elCity = $('#city');
+  const elBase = $('#baseUrl');
+  const elCustomBase = $('#customBaseUrl');
+  const elApiKey = $('#apiKey');
+  const elBasic = $('#basic');
+  const elAuthMode = $('#authMode');
+
+  const elBtn = $('#btnRun');
+  const elBtnClear = $('#btnClear');
+  const elCopy = $('#btnCopy');
+  const elShare = $('#btnShare');
+  const elDownload = $('#btnDownload');
+
+  const elEmpty = $('#resultEmpty');
+  const elRes = $('#result');
+  const elErr = $('#err');
+  const elPriority = $('#priorityBadge');
+  const elAspect = $('#aspect');
+  const elParticipant = $('#participant');
+  const elPlace = $('#place');
+  const elRec = $('#rec');
+  const elProbs = $('#probs');
+  const elTokens = $('#tokens');
+  const elJSON = $('#json');
+  const elHist = $('#history');
+  const elMapWrap = $('#mapWrap');
+  const elKpiPr = $('#kpiPr');
+  const elKpiLat = $('#kpiLat');
+  const elKpiHist = $('#kpiHist');
+  const toast = $('#toast');
+
+  // Params → prefill
+  const params = new URLSearchParams(location.search);
+  if(params.get('t')) elText.value = decodeURIComponent(params.get('t'));
+  if(params.get('api')) elApiKey.value = params.get('api');
+  if(params.get('base')) { elCustomBase.value = params.get('base'); elBase.value = ''; }
+
+  function baseURL(){ return (elBase.value || elCustomBase.value || 'http://localhost:8000').replace(/\/$/,''); }
+  function setBusy(b){ elBtn.disabled=b; elBtn.textContent = b ? 'Analyzing…' : 'Analyze'; }
+  function showToast(t){ toast.textContent=t; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 900); }
+  function clsForPriority(p){ return p==='critical'?'critical':p==='high'?'high':p==='medium'?'medium':'low'; }
+
+  function renderProbs(probs){
+    elProbs.innerHTML = '';
+    if(!probs) return;
+    const order = ['low','medium','high','critical'];
+    order.forEach(k=>{
+      const v = (probs[k]||0); const pct = Math.round(v*100);
+      const row = document.createElement('div'); row.style.margin='6px 0';
+      row.innerHTML = `<div class="kv"><div style="text-transform:capitalize">${k}</div>
+        <div><div class="bar"><i style="width:${pct}%"></i></div>
+        <div class="hint">${pct}%</div></div></div>`;
+      elProbs.appendChild(row);
+    });
+  }
+
+  function renderTokens(tokens){
+    elTokens.innerHTML='';
+    (tokens||[]).forEach(t=>{
+      const span=document.createElement('div'); span.className='chip'; span.textContent=t; elTokens.appendChild(span);
+    })
+  }
+
+  function renderMap(lat,lon){
+    if(lat==null||lon==null){ elMapWrap.classList.add('hidden'); elMapWrap.innerHTML=''; return; }
+    const bbox = [lon-0.02, lat-0.015, lon+0.02, lat+0.015].map(n=>n.toFixed(6)).join(',');
+    const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
+    const link = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`;
+    elMapWrap.classList.remove('hidden');
+    elMapWrap.innerHTML = `<iframe class="map" src="${src}"></iframe><div class="hint">Open in <a href="${link}" target="_blank" rel="noopener">OpenStreetMap</a></div>`;
+  }
+
+  const history = [];
+  function pushHistory(text, out){
+    history.unshift({t:new Date(), text, out});
+    if(history.length>12) history.pop();
+    elKpiHist.textContent = String(history.length);
+    renderHistory();
+  }
+  function renderHistory(){
+    if(!history.length){ elHist.textContent='Empty.'; return; }
+    elHist.innerHTML='';
+    history.forEach((h,idx)=>{
+      const div = document.createElement('div');
+      div.style.borderTop = idx? '1px solid var(--border)':'none';
+      div.style.padding='8px 0';
+      div.innerHTML = `<div class="row" style="justify-content:space-between"><div class="hint">${h.t.toLocaleTimeString()}</div>
+        <div class="pill">${(h.out.priority||'-').toUpperCase()}</div></div>
+        <div class="hint" style="margin:4px 0">${(h.text||'').slice(0,160)}</div>
+        <div class="row"><button class="btn ghost">Re-run</button><button class="btn ghost">Fill</button></div>`;
+      const [btnR, btnF] = div.querySelectorAll('button');
+      btnR.onclick = ()=> { elText.value = h.text; run(); };
+      btnF.onclick = ()=> { elText.value = h.text; showToast('Filled'); };
+      elHist.appendChild(div);
+    })
+  }
+
+  async function run(){
+    const txt = (elText.value||'').trim();
+    if(txt.length < 5){ showToast('Введите текст жалобы'); elText.focus(); return; }
+    setBusy(true); elErr.classList.add('hidden');
+    const t0 = performance.now();
+    try{
+      const url = baseURL() + '/analyze';
+      const body = { text: txt };
+      if(elCity.value.trim()) body.city_hint = elCity.value.trim();
+
+      const headers = { 'Content-Type':'application/json' };
+      const mode = elAuthMode.value;
+      if((mode==='apikey'||mode==='both') && elApiKey.value.trim()) headers['x-api-key']=elApiKey.value.trim();
+      if((mode==='basic'||mode==='both') && elBasic.value.includes(':')){
+        const token = btoa(elBasic.value);
+        headers['Authorization'] = 'Basic ' + token;
+      }
+
+      const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(body) });
+      const t1 = performance.now();
+      elKpiLat.textContent = String(Math.round(t1 - t0));
+
+      if(!r.ok){
+        const txt = await r.text();
+        throw new Error(`HTTP ${r.status}: ${txt}`);
+      }
+      const j = await r.json();
+
+      elEmpty.classList.add('hidden'); elRes.classList.remove('hidden');
+      elJSON.textContent = JSON.stringify(j,null,2);
+
+      const pr = (j.priority||'low').toLowerCase();
+      elKpiPr.textContent = pr.toUpperCase();
+      elPriority.textContent = pr.toUpperCase();
+      elPriority.className = 'priority ' + clsForPriority(pr);
+
+      elAspect.textContent = j.aspect || '—';
+      elParticipant.textContent = (j.participant && j.participant.role) || '—';
+
+      const place = j.place || {}; const nm = place.name || place.display || '—';
+      const city = place.city_hint || place.city || '';
+      const lat = place.lat, lon = place.lon;
+      elPlace.innerHTML = `${nm}${city?` <span class="hint">(${city})</span>`:''}`;
+      renderMap(lat,lon);
+
+      elRec.textContent = j.recommendation_kz || '—';
+      renderProbs(j.probs);
+      renderTokens((j.explain && j.explain.model_top_tokens) || []);
+
+      pushHistory(txt, j);
+    }catch(err){
+      console.error(err);
+      elErr.classList.remove('hidden');
+      const isCORS = (String(err).includes('TypeError: Failed to fetch'));
+      elErr.innerHTML = isCORS
+        ? 'Запрос заблокирован (CORS). Откройте этот файл как <code>/demo/index.html</code> с того же хоста, что и API, <b>или</b> включите CORSMiddleware в FastAPI.'
+        : String(err);
+    }finally{ setBusy(false); }
+  }
+
+  function share(){
+    const u = new URL(location.href);
+    u.searchParams.set('t', encodeURIComponent(elText.value || ''));
+    if(elApiKey.value) u.searchParams.set('api', elApiKey.value);
+    if(elCustomBase.value) u.searchParams.set('base', elCustomBase.value);
+    navigator.clipboard.writeText(u.toString());
+    showToast('Link copied');
+  }
+
+  function copyJSON(){
+    const txt = $('#json').textContent || '';
+    navigator.clipboard.writeText(txt);
+    showToast('JSON copied');
+  }
+
+  function downloadJSON(){
+    const data = $('#json').textContent || '{}';
+    const blob = new Blob([data], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'analyze_result.json';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+  }
+
+  function fillSample(id){
+    const samples = {
+      kz1: '58 маршрутта 08:30-да Сарыарқа аялдамасында автобус битком, жүргізуші тоқтамады',
+      ru1: 'Алматы, у остановки Сайран валидатор не работает, очередь большая',
+      safety: 'Автобус поехал с открытой дверью, на остановке Абая. Это опасно!',
+      punctual: 'Маршрут 32 стабильно опаздывает вечером после 19:00'
+    };
+    elText.value = samples[id] || '';
+    elText.focus();
+  }
+
+  // Wire up
+  document.querySelectorAll('.chip[data-s]').forEach(ch=>{
+    ch.addEventListener('click', ()=> fillSample(ch.getAttribute('data-s')))
+  });
+  elBtn.onclick = run;
+  elBtnClear.onclick = ()=>{ elText.value=''; elText.focus(); };
+  elCopy.onclick = copyJSON;
+  elShare.onclick = share;
+  elDownload.onclick = downloadJSON;
+
+  // Cmd/Ctrl+Enter to run
+  window.addEventListener('keydown', (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key==='Enter') run();
+  });
+
+  // Prefer same‑host backend if served from server
+  try{
+    if(location.origin.startsWith('http')){
+      const guess = location.origin;
+      if(guess && !guess.includes('file:')){
+        if(guess!=='http://localhost:8000'){
+          elBase.value='';
+          elCustomBase.value=guess;
+        }
+      }
+    }
+  }catch{}
+</script>
+</body>
+</html>
